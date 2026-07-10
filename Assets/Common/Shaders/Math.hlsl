@@ -45,11 +45,11 @@ bool coneIntersection(float3 ray_ori, float3 ray_dir, float R, float H, out floa
     return true;
 }
 
-half erfApproximate(half x)
+float erfApproximate(float x)
 {
-    half x2 = x * x;
+    float x2 = x * x;
     // 1.27323954  是 4 / PI 的近似值
-    half val = sqrt(1.0h - exp(-1.27323954h * x2));
+    float val = sqrt(1.0f - exp(-1.27323954f * x2));
     return sign(x) * val;
 }
 
@@ -70,6 +70,14 @@ bool AABB(float3 ray_ori, float3 ray_dir, float L, out float t_near, out float t
     t_far = min(t_out.z, min(t_out.x, t_out.y));
 
     if (t_near > t_far) return false;
-    t_near = max(0.0, t_near);
+    t_near = max(0.0f, t_near);
     return true;
+}
+
+float3 BlendNormalRNMCustom(float3 baseNormal, float3 detailNormal)
+{
+    float3 t = float3(baseNormal.xy, baseNormal.z + 1.0);
+    float3 u = float3(-detailNormal.xy, detailNormal.z);
+    float3 r = t * dot(t, u) - u * t.z;
+    return normalize(r);
 }

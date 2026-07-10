@@ -1,3 +1,7 @@
+#define amplitude 0.5h
+#define half_amplitude 0.25h
+#define quarter_amplitude 0.125h
+
 half hash21(half2 p)
 {
     half3 p3 = frac(half3(p.xyx) * 0.1031h);
@@ -26,17 +30,19 @@ half noise2D(half2 p)
 half fBm2D(half2 p)
 {
     half value = 0.0h;
-    half amplitude = 0.5h;
     // 叠加 3 层噪声
     // 第 1 层 增加 [0, 0.5] 的值
     // 第 2 层 增加 [0, 0.25]
     // 第 3 层 增加 [0, 0.125]
-    for (int i = 0; i < 3; i++)
+    /*for (int i = 0; i < 3; i++)
     {
         value += noise2D(p) * amplitude;
         p *= 2.0h;
         amplitude *= 0.5h;
-    }
+    }*/
+    value += amplitude * noise2D(p);
+    value += half_amplitude * noise2D(2.0h * p);
+    value += quarter_amplitude * noise2D(4.0h * p);
     return value;
 }
 
@@ -68,12 +74,14 @@ half noise3D(half3 p)
 half fbm3D(half3 p)
 {
     half value = 0.0h;
-    half amplitude = 0.5h;
-    for (int i = 0; i < 3; i++)
+    /*for (int i = 0; i < 3; i++)
     {
         value += noise3D(p) * amplitude;
         p *= 2.0h;
         amplitude *= 0.5h;
-    }
+    }*/
+    value += amplitude * noise3D(p);
+    value += half_amplitude * noise3D(2.0h * p);
+    value += quarter_amplitude * noise3D(4.0h * p);
     return value;
 }

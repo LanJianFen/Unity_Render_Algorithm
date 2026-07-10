@@ -45,20 +45,19 @@ Shader "Custom/3D_Sphere_Geometry_Fog"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
-            #include  "../../../Common/Math.hlsl"
-            #include  "../../../Common/Noise.hlsl"
+            #include  "../../../../Common/Shaders/Math.hlsl"
+            #include  "../../../../Common/Shaders/Noise.hlsl"
 
             struct Attributes
             {
                 float4 position_os : POSITION;
-                float2 uv : TEXCOORD0;
             };
 
             struct v2f
             {
                 float4 position_cs : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 position_os : TEXCOORD1;
+                float3 position_os : TEXCOORD0;
+                float3 ray_ori_os  : TEXCOORD1;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -75,14 +74,15 @@ Shader "Custom/3D_Sphere_Geometry_Fog"
                 half _BlendDistance;
             CBUFFER_END
 
-            #define R 0.5
+            #define _R 0.5f
+            #define _R2 0.25f
 
             v2f vertexShader(Attributes i)
             {
                 v2f o;
-                o.uv = i.uv;
                 o.position_cs = TransformObjectToHClip(i.position_os.xyz);
                 o.position_os = i.position_os.xyz;
+                o.ray_ori_os = TransformWorldToObject(_WorldSpaceCameraPos); // 这个值放到 VS 里用一个插值器 trade off FS里每个像素的矩阵乘法
                 return o;
             }
 
@@ -96,6 +96,8 @@ Shader "Custom/3D_Sphere_Geometry_Fog"
                 _NoiseSpeedY = 0.2h * _NoiseSpeedY;
                 _NoiseSpeedZ = 0.2h * _NoiseSpeedZ;
 
+                // 积分法，这是错的，没考虑路径上的透射衰减，直接在路径上对场积分是错误的
+                /*
                 // ============
                 // 求射线与球的入射点和出射点
                 // ============
@@ -136,13 +138,24 @@ Shader "Custom/3D_Sphere_Geometry_Fog"
                 float sqrt_a = sqrt(a);
                 half average_falloff = 0.5f * exp(-min_value) * sqrt(PI / a) *
                     (erfApproximate(sqrt_a * (t_far - t_extremum)) -erfApproximate(sqrt_a * (t_near - t_extremum)));
-                
-                // 路径上的极值点
+                */
+
+                // 正确的做法是在 [t_near, t_far] 找一点代入标量场 ，这里找最靠近球心的一点
+                float3 ray_ori_os = i.ray_ori_os;
+                float3 ray_dir_os = normalize(i.position_os - ray_ori_os);
+                // (O + t · D)² ，tmin = - (O · D)
+                // 路径上的极值点, 可能在入射点和出射点外部，但是不用在意
+                float t_extremum = -dot(ray_ori_os , ray_dir_os);
                 float3 extremum_pos = ray_ori_os + t_extremum * ray_dir_os;
-                // 用极值点代替积分，一元二次方程的最小值，反而是衰减函数路径上的最大值
-                float3 extremum_pos_clamp = clamp(t_near, t_far, extremum_pos);
-                average_falloff = exp(- (extremum_pos_clamp.x * extremum_pos_clamp.x + extremum_pos_clamp.z * extremum_pos_clamp.z) * _HorizontalFade - extremum_pos_clamp.y * extremum_pos_clamp.y * _VerticalFade );
-                float3 sample_pos = extremum_pos * _NoiseScale - _Time.y * float3(_NoiseSpeedX, _NoiseSpeedY, _NoiseSpeedZ);
+                //half average_falloff = exp(- (extremum_pos.x * extremum_pos.x + extremum_pos.z * extremum_pos.z) * _HorizontalFade - extremum_pos.y * extremum_pos.y * _VerticalFade );
+                half horizontal_ratio2 = (extremum_pos.x * extremum_pos.x + extremum_pos.z * extremum_pos.z) / _R2;  // 这里是两个方向的衰减形状当成一个圆柱了，不然减少横向的时候看起来还是一个球
+                half horizontal_falloff = pow(1.0h - horizontal_ratio2, _HorizontalFade);
+
+                half vertical_ratio2 = extremum_pos.z * extremum_pos.z / _R2;
+                half vertical_falloff = pow(1.0h - vertical_ratio2, _VerticalFade);
+                half average_falloff = horizontal_falloff * vertical_falloff;
+
+                half3 sample_pos = extremum_pos * _NoiseScale - (half)_Time.y * half3(_NoiseSpeedX, _NoiseSpeedY, _NoiseSpeedZ);
                 half noise_val = fbm3D(sample_pos);
                 // 把低浓度的地方变成 0， 增加镂空感
                 // noise_val = smoothstep(0.2h, 0.7h, noise_val)
@@ -157,17 +170,16 @@ Shader "Custom/3D_Sphere_Geometry_Fog"
                 float background_real_depth = LinearEyeDepth(background_01_depth, _ZBufferParams);
                 // 圆锥和背景的深度差值
                 float cone_real_depth = LinearEyeDepth(i.position_cs.z, _ZBufferParams);
-                float depth_diff = background_real_depth - cone_real_depth;
+                half depth_diff = background_real_depth - cone_real_depth;
                 // 归一化，只有 [0, _BlendDistance] 的背景才会软化
-                float depth_blend_falloff = saturate(depth_diff / _BlendDistance);
+                half depth_blend_falloff = saturate(depth_diff / _BlendDistance);
 
                 // FadeIntensity 的物理意义是 每前进 1 米，这团物质能吸收多少光线
                 // fixed_density 的 乘数说的是 透明的地方少衰减一点，不透明的地方多衰减一点（有意义吗？）
                 // half fixed_density = _FadeIntensity * (1.0h + noise_val * 2.0h)
                 // half blend_falloff = 1.0h - exp(- depth_diff * fixed_density)
-                // 最终融合！  
-                half3 finalColor = depth_blend_falloff * noise_falloff * average_falloff *_Intensity * _FogColor.rgb;
-                return half4(finalColor, 1.0h);
+                // 最终融合！  Blend One One, alpha 返回什么无所谓
+                return depth_blend_falloff * noise_falloff * average_falloff *_Intensity * _FogColor;
             }
             ENDHLSL
         }
