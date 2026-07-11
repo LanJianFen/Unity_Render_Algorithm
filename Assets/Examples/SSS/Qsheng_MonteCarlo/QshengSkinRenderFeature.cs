@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 public static class QualityParams {
     public static float fSkinTextureRate = 1.0f; // 渲染分辨率倍率
-    public static float fSkinSSSReductRate = 1f; // SSS降采样倍率，建议0.5
+    public static float fSkinSSSReductRate = 0.7f; // SSS降采样倍率，建议0.5
     public static bool bEnableSkinSSS = true; // SSS总开关
 }
 

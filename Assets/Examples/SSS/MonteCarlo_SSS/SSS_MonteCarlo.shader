@@ -13,7 +13,7 @@
         {
             Tags
             {
-                "LightMode" = "SSS_MonteCarlo"
+                "LightMode" = "Subsurface Scattering MonteCarlo"
             }
 
             Stencil
@@ -37,8 +37,9 @@
 
             struct Attibutes
             {
-                float4 position_os : POSITION;
-                float2 uv : TEXCOORD0;
+                uint vertex_id : SV_VertexID;
+                //float4 position_os : POSITION;
+                //float2 uv : TEXCOORD0;
             };
 
             struct Varings
@@ -50,19 +51,22 @@
             // 拿到我们在 C# 里画好的入流漫反射图
             TEXTURE2D(_SkinDiffuseRT);
             SAMPLER(sampler_SkinDiffuseRT);
-
+            float4 _SkinDiffuseRT_TexelSize;
+            float4 _SubsurfaceScatteringDistance;
+            float _SurfaceScale;
+            
             Varings vert(Attibutes i)
             {
                 Varings o;
-                o.position_cs = float4(i.position_os.xy, 0.0, 1.0);
-                o.uv = i.uv;
-                // 因为你绕过了 P 矩阵的 Y 翻转，所以必须要靠这个宏手动把 UV 翻正！
-                #if UNITY_UV_STARTS_AT_TOP
-                if (_ProjectionParams.x < 0.0)
-                    o.uv.y = 1.0 - o.uv.y;
-                #endif
+                //o.position_cs = float4(i.position_os.xy, 0.0, 1.0);
+                o.position_cs = GetFullScreenTriangleVertexPosition(i.vertex_id);
+                //o.uv = i.uv;
+                o.uv = GetFullScreenTriangleTexCoord(i.vertex_id);
                 return o;
             }
+
+            #define _MM_PER_METER 1000.0f * _SurfaceScale
+            #define _METER_PER_MM 0.001f
 
             half4 frag(Varings i) : SV_Target
             {
@@ -71,13 +75,10 @@
                 float center_real_depth = LinearEyeDepth(center_01_depth, _ZBufferParams);
                 float3 irradiance = SAMPLE_TEXTURE2D(_SkinDiffuseRT, sampler_SkinDiffuseRT, i.uv).rgb;
 
-                // 2. 如果当前像素没有漫反射信息（纯黑），直接返回（说明这不是 SSS 物体）
-                //if (dot(irradiance, 1.0) < 0.001) return half4(1, 0, 0, 0);
-
+                // 
                 float fovScale = unity_CameraProjection[1][1];
                 float metersPerPixel = (2.0 * center_real_depth) / (fovScale * _ScreenParams.y);
-                float meter2mm = 1000.0f;
-                float pixelsPerMm = rcp(max(0.00001f, metersPerPixel) * meter2mm);
+                float pixelsPerMm = rcp(max(0.00001f, metersPerPixel) * _MM_PER_METER);
 
                 uint2 pixelCoord = (uint2)(i.uv * _ScreenParams.xy);
                 float base_angle = TWO_PI * GenerateHashedRandomFloat(
@@ -88,7 +89,7 @@
                 float3 s = float3(1.0f / 15.0f, 1.0f / 5.0f, 1.0f / 2.0f);
                 float3 total_radiance = 0.0;
                 float3 total_weight = 0.0;
-                int sample_count = 12;
+                int sample_count = 32;
                 for (int k = 0; k < sample_count; k++)
                 {
                     float scale = rcp(sample_count);
@@ -107,21 +108,17 @@
                     float2 sample_dir = float2(cos_sample_angle, sin_sample_angle);
                     // 当前屏幕坐标 + (采样方向 * 采样半径)(mm单位) * (每mm占的像素) = 新的像素坐标
                     float2 sample_position_ss = pixelCoord + round(pixelsPerMm * sample_r * sample_dir);
-                    // 强制转为 int2，因为像素没有半个
-                    //int2 pixelPos = int2(sample_position_ss);
-                    // 算出屏幕的最大合法坐标 (比如 1920x1080 的屏幕，最大坐标是 1919x1079)
-                    //int2 maxPixel = int2(_ScreenParams.xy) - 1;
-                    // 把坐标死死卡在 [0, 0] 到 [最大值] 之间
-                    //pixelPos = clamp(pixelPos, int2(0, 0), maxPixel);
+
                     float2 sample_uv = sample_position_ss / _ScreenParams.xy;
                     float3 sample_irradiance = SAMPLE_TEXTURE2D(_SkinDiffuseRT, sampler_SkinDiffuseRT, sample_uv).rgb;
+                    sample_irradiance = max(HALF_MIN, sample_irradiance);
 
                     // 计算 3D 距离
                     float sample_01_depth = SampleSceneDepth(sample_uv);
                     float sample_real_depth = LinearEyeDepth(sample_01_depth, _ZBufferParams);
 
-                    float sample_r2 = sample_r * sample_r;
-                    float real_sample_r = sqrt(sample_r2 + (sample_real_depth - center_real_depth) * 1000.0);
+                    float sample_depth = (sample_real_depth - center_real_depth) * _MM_PER_METER;
+                    float real_sample_r = sqrt(sample_r * sample_r + sample_depth * sample_depth);
                     // 3d 世界里的真实距离
                     float3 weight = BurleyDiffusionProfile(real_sample_r, s);
 
@@ -129,7 +126,7 @@
                     total_weight += weight;
                 }
 
-                //return half4(0.0f,0.0f,0.0f,0.0f);
+                //return half4(i.uv.y,0.0f,0.0f,0.0f);
                 return half4(total_radiance / total_weight, 1.0);
             }
             ENDHLSL

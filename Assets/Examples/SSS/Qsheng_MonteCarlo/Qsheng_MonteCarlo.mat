@@ -24,7 +24,8 @@ Material:
   m_Shader: {fileID: 4800000, guid: a0b847945480da94190d5c905d5c9248, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _SUBSURFACE_SCATTERING_ON
   m_InvalidKeywords:
   - _MAKEUP_ON
   m_LightmapFlags: 4
@@ -184,7 +185,7 @@ Material:
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _SUBSURFACE_SCATTERING: 0
+    - _SUBSURFACE_SCATTERING: 1
     - _ShadowMultiply: 0.27
     - _ShadowOpen: 0
     - _ShadowPower: 1.22
@@ -224,7 +225,7 @@ Material:
     - _LightDirection: {r: 0.7, g: -0.5, b: 0, a: 0}
     - _LipstickColor: {r: 0, g: 0, b: 0, a: 0}
     - _LipstickTillingAndOffset: {r: 1, g: 1, b: 0, a: 0}
-    - _ShadowColor: {r: 0.7075472, g: 0, b: 0, a: 1}
+    - _ShadowColor: {r: 1, g: 1, b: 1, a: 1}
     - _SkinColor: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}

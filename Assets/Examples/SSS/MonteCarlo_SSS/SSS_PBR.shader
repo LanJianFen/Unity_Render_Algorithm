@@ -29,7 +29,7 @@
         {
             Tags
             {
-                "LightMode" = "SSS_MRT"
+                "LightMode" = "Subsurface Scattering Forward"
             }
 
             Stencil
