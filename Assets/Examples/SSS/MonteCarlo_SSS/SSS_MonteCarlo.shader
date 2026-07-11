@@ -81,12 +81,10 @@
                 float pixelsPerMm = rcp(max(0.00001f, metersPerPixel) * _MM_PER_METER);
 
                 uint2 pixelCoord = (uint2)(i.uv * _ScreenParams.xy);
-                float base_angle = TWO_PI * GenerateHashedRandomFloat(
-                    uint3(pixelCoord, (uint)(center_01_depth * 100000)));
+                float base_angle = TWO_PI * GenerateHashedRandomFloat(uint3(pixelCoord, (uint)(center_01_depth * 1235670.0f)));
                 float sin_base_angle, cos_base_angle;
                 sincos(base_angle, sin_base_angle, cos_base_angle);
 
-                float3 s = float3(1.0f / 15.0f, 1.0f / 5.0f, 1.0f / 2.0f);
                 float3 total_radiance = 0.0;
                 float3 total_weight = 0.0;
                 int sample_count = 32;
@@ -96,7 +94,7 @@
                     float offset = rcp(sample_count) * 0.5;
                     float cdf = k * scale + offset;
                     float sample_r, rcp_pdf;
-                    SampleBurleyPDF(cdf, s.r, sample_r, rcp_pdf);
+                    SampleBurleyPDF(cdf, _SubsurfaceScatteringDistance.a, sample_r, rcp_pdf);
 
                     float random_angle = SampleDiskGolden1(k, sample_count).y;
                     float cos_random_angle, sin_random_angle;
@@ -120,7 +118,7 @@
                     float sample_depth = (sample_real_depth - center_real_depth) * _MM_PER_METER;
                     float real_sample_r = sqrt(sample_r * sample_r + sample_depth * sample_depth);
                     // 3d 世界里的真实距离
-                    float3 weight = BurleyDiffusionProfile(real_sample_r, s);
+                    float3 weight = BurleyDiffusionProfile(real_sample_r, _SubsurfaceScatteringDistance.rgb) * rcp_pdf;
 
                     total_radiance += weight * sample_irradiance;
                     total_weight += weight;

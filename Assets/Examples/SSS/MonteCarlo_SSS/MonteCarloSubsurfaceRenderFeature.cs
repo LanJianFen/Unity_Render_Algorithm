@@ -101,12 +101,12 @@ namespace Examples.SSS.MonteCarlo_SSS
                 // 给 Monte Carlo Shader传参
                 // Burley Diffusion Profile 里的散射距离参数 s
                 Vector3 s = new Vector3(
-                    1.0f / Math.Max(_subsurfaceScatteringDistance.r * 255.0f, float.MinValue),
-                    1.0f / Math.Max(_subsurfaceScatteringDistance.g * 255.0f, float.MinValue),
-                    1.0f / Math.Max(_subsurfaceScatteringDistance.b * 255.0f, float.MinValue)
+                    1.0f / Math.Max(_subsurfaceScatteringDistance.r * 255.0f, 0.0001f),
+                    1.0f / Math.Max(_subsurfaceScatteringDistance.g * 255.0f, 0.0001f),
+                    1.0f / Math.Max(_subsurfaceScatteringDistance.b * 255.0f, 0.0001f)
                 );
-                Debug.Log(_subsurfaceScatteringDistance.r);
-                float rcpMaxScatteringDistance = Mathf.Min(s.x, Mathf.Min(s.x, s.y));
+                float rcpMaxScatteringDistance = Mathf.Min(s.x, Mathf.Min(s.z, s.y));
+                Debug.Log(1.0f / rcpMaxScatteringDistance);
                 Vector4 rcpSubsurfaceScatteringDistanceParams = new Vector4(s.x, s.y, s.z, rcpMaxScatteringDistance);
                 
                 cmd.SetGlobalVector(_subsurfaceScatteringDistanceParamsId, rcpSubsurfaceScatteringDistanceParams);
