@@ -54,8 +54,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -1878332245247344467}
   - {fileID: 239181271188484268}
-  - {fileID: 7533476613093629529}
-  m_RendererFeatureMap: adc0de57c6d2eee5acb01d5219be5103599e28c710498c68
+  - {fileID: 5099300807696280133}
+  m_RendererFeatureMap: adc0de57c6d2eee5acb01d5219be5103456a993d115bc446
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -116,10 +116,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8ca98dfbc1e40f59cd7069de33d169b, type: 3}
   m_Name: CustomMonteCarloSSSRenderFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   subsurfaceScatteringMonteCarloShader: {fileID: 4800000, guid: 7ce3b7a5199846368d78c43c4c2c655a,
     type: 3}
---- !u!114 &7533476613093629529
+  subsurfaceScatteringDistance: {r: 0.007843138, g: 0.003921569, b: 0.003921569, a: 1}
+  surfaceScale: 1
+--- !u!114 &5099300807696280133
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -128,12 +130,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bb0335a287fd4365ab51d189af3fd6c8, type: 3}
-  m_Name: QshengSkinRenderFeature
+  m_Script: {fileID: 11500000, guid: 3e198a68187846bba22bf684a50aef9d, type: 3}
+  m_Name: SubsurfaceScatteringMonteCarloRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  sssMat: {fileID: 2100000, guid: 6702e914e3e4ebc4bbf79354a3a82cf9, type: 2}
-  scatteringDistance: {r: 0.202, g: 0.131, b: 0.117, a: 1}
-  transmissionTint: {r: 0.145, g: 0.103, b: 0.018, a: 1}
-  worldScale: 1
-  ior: 1.98
+  sssMonteCarloCoreShader: {fileID: 0}
+  sssDistance: {r: 15, g: 5, b: 2, a: 1}
+  surfaceScale: 1
